@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import socket
+import threading
 import tempfile
 import time
 from ipaddress import ip_address
@@ -21,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent
 CARPETA_DESCARGA = BASE_DIR / "descarga"
 TEMPORALES_ANDROID = Path(tempfile.gettempdir()) / "todo4-android"
 TEMP_TTL_SECONDS = 3600
+CONTADORES_DESCARGAS = {"audio": 0, "video": 0}
+LOCK_CONTADORES = threading.Lock()
 
 
 @app2.route("/csrf-token", methods=["GET"])
@@ -106,33 +109,8 @@ def descargax():
     prefijo = "audio" if tipo == "audio" else "video"
 
     def siguiente_numero() -> int:
-        contadores_file = BASE_DIR / "contadores.txt"
-        lock_file = BASE_DIR / ".contadores.lock"
-        limite = time.monotonic() + 15
-        while True:
-            try:
-                descriptor = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-                os.close(descriptor)
-                break
-            except FileExistsError:
-                try:
-                    if time.time() - lock_file.stat().st_mtime > 60:
-                        lock_file.unlink(missing_ok=True)
-                        continue
-                except FileNotFoundError:
-                    continue
-                if time.monotonic() >= limite:
-                    raise OSError("No se pudo bloquear el contador de descargas.")
-                time.sleep(0.05)
-
-        temporal_file: Path | None = None
-        try:
-            contadores = {"audio": 0, "video": 0}
-            if contadores_file.is_file():
-                for linea in contadores_file.read_text(encoding="utf-8").splitlines():
-                    nombre, separador, valor = linea.partition("=")
-                    if separador and nombre in contadores and valor.isdigit():
-                        contadores[nombre] = int(valor)
+        with LOCK_CONTADORES:
+            maximo = CONTADORES_DESCARGAS[prefijo]
             for carpeta_existente in (CARPETA_DESCARGA, TEMPORALES_ANDROID):
                 if not carpeta_existente.is_dir():
                     continue
@@ -140,25 +118,15 @@ def descargax():
                 for archivo_existente in archivos:
                     match = re.fullmatch(rf"{prefijo}([1-9][0-9]*)\..+", archivo_existente.name)
                     if archivo_existente.is_file() and match:
-                        contadores[prefijo] = max(contadores[prefijo], int(match[1]))
-            numero = contadores[prefijo] + 1
-            contadores[prefijo] = numero
-            with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", dir=BASE_DIR, prefix=".contadores-", suffix=".tmp", delete=False
-            ) as archivo_temporal:
-                temporal_file = Path(archivo_temporal.name)
-                archivo_temporal.writelines(f"{nombre}={valor}\n" for nombre, valor in contadores.items())
-            os.replace(temporal_file, contadores_file)
+                        maximo = max(maximo, int(match[1]))
+            numero = maximo + 1
+            CONTADORES_DESCARGAS[prefijo] = numero
             return numero
-        finally:
-            if temporal_file is not None:
-                temporal_file.unlink(missing_ok=True)
-            lock_file.unlink(missing_ok=True)
 
     try:
         numero = siguiente_numero()
     except OSError:
-        current_app.logger.exception("No se pudo guardar el contador de descargas")
+        current_app.logger.exception("No se pudo asignar el nombre consecutivo")
         return respuesta("error", "No se pudo asignar un nombre consecutivo al archivo.", 503)
     identificador = f"{prefijo}{numero}"
     temporal = destino == "android" or os.environ.get("RENDER") == "true" or os.environ.get("TEMPORARY_DOWNLOADS") == "1"
