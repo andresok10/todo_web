@@ -180,16 +180,7 @@ def descargax():
         if len(archivos) != 1 or archivos[0].stat().st_size == 0:
             raise DownloadError("No se generó un archivo multimedia completo.")
         archivo = archivos[0]
-        if token and destino == "web":
-            mensaje = (
-                f"Descarga iniciada automáticamente: {archivo.name}. Se guardará en la carpeta "
-                "Descargas de tu dispositivo o en la ubicación configurada en el navegador. "
-                "Render elimina su copia temporal después de enviarla."
-            )
-        elif token:
-            mensaje = f"Descarga lista: {archivo.name}"
-        else:
-            mensaje = f"Archivo guardado en: {archivo}"
+        mensaje = "Video descargado" if tipo == "video" else "Audio descargado"
         return respuesta(
             "success",
             mensaje,

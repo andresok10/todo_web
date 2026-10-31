@@ -20,8 +20,8 @@
         </nav>
     </header>
     <main class="descarga-container resultado-descarga">
-        <div class="card-heading"><div><h2>{% if estado == 'success' %}Descarga lista{% else %}No se pudo descargar{% endif %}</h2></div></div>
-        <p class="mensaje-descarga" role="status">{{ msg }}</p>
+        <div class="card-heading"><div><h2>{% if estado == 'success' %}{{ msg }}{% else %}No se pudo descargar{% endif %}</h2></div></div>
+        {% if estado != 'success' %}<p class="mensaje-descarga" role="status">{{ msg }}</p>{% endif %}
         <a class="volver-link" href="{{ url_for('calendario.calendario_app', panel='descargas') }}">Volver a descargas</a>
     </main>
     <footer>Todo · Hecho para tu día a día</footer>
