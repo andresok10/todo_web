@@ -60,6 +60,17 @@ def listar_rutas_servidor():
             rutas.append({"ruta": str(ruta_archivo.resolve()), "github": f"https://github.com/andresok10/todo_web/blob/main/todo_web/{quote(ruta_repo)}"})
     ruta_ffmpeg = FFMPEG or "No detectado"
     ruta_node = NODE or "No detectado"
+    datos_servidor = {
+        "rutas": rutas,
+        "raiz": str(BASE_DIR),
+        "carpeta_temporal": str(TEMPORALES_ANDROID),
+        "ruta_ffmpeg": ruta_ffmpeg,
+        "ruta_node": ruta_node,
+    }
+    if request.args.get("format") == "json":
+        respuesta = jsonify(datos_servidor)
+        respuesta.headers["Cache-Control"] = "no-store"
+        return respuesta
     return render_template("app.html", panel="server", rutas=rutas, raiz=str(BASE_DIR), carpeta_temporal=str(TEMPORALES_ANDROID), ruta_ffmpeg=ruta_ffmpeg, ruta_node=ruta_node)
 
 
