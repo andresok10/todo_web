@@ -41,13 +41,12 @@ def listar_rutas_servidor():
     for carpeta, directorios, archivos in os.walk(BASE_DIR, topdown=True, followlinks=False):
         directorios[:] = sorted(nombre for nombre in directorios if nombre not in carpetas_excluidas)
         ruta_carpeta = Path(carpeta).resolve()
-        rutas.append({"tipo": "Carpeta", "ruta": str(ruta_carpeta)})
         for nombre in sorted(archivos):
             nombre_minusculas = nombre.lower()
             if nombre == ".env" or "cookie" in nombre_minusculas or "secret" in nombre_minusculas or nombre.endswith(".pyc"):
                 continue
             ruta_archivo = ruta_carpeta / nombre
-            rutas.append({"tipo": "Archivo", "ruta": str(ruta_archivo.resolve())})
+            rutas.append({"ruta": str(ruta_archivo.resolve())})
     candidatos_ffmpeg = [
         os.environ.get("FFMPEG_LOCATION"),
         shutil.which("ffmpeg"),

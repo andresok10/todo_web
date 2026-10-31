@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server · Todo</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='7') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='8') }}">
 </head>
 <body>
     <header class="app-header">
@@ -29,7 +29,7 @@
         <h3>Rutas del proyecto</h3>
         <ul class="server-rutas">
             {% for elemento in rutas %}
-            <li><strong>{{ elemento.tipo }}:</strong> <code>{{ elemento.ruta }}</code></li>
+            <li><code>{{ elemento.ruta }}</code></li>
             {% endfor %}
         </ul>
     </main>
