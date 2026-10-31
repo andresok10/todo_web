@@ -1,15 +1,13 @@
 services:
   - type: web
     name: todo-web
-    runtime: docker
+    runtime: python
     plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: 'gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 900 --access-logfile - --error-logfile - app:app'
     healthCheckPath: /
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: TEMPORARY_DOWNLOADS
         value: "1"
-      - key: FFMPEG_LOCATION
-        value: /usr/bin/ffmpeg

@@ -6,7 +6,8 @@ __pycache__/
 venv/
 ffmpeg/
 descarga/
-*.sqlite3
-*.sqlite3-*
+contadores.txt
+.contadores.lock
+.contadores-*.tmp
 *.log
 *.zip
