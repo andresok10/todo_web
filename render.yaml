@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: todo-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TEMPORARY_DOWNLOADS
+        value: "1"
+      - key: FFMPEG_LOCATION
+        value: /usr/bin/ffmpeg

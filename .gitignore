@@ -1,0 +1,12 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+.venv/
+venv/
+ffmpeg/
+descarga/
+*.sqlite3
+*.sqlite3-*
+*.log
+*.zip

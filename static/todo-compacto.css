@@ -1,0 +1,96 @@
+
+        :root { color-scheme: light; --ink:#17332f; --muted:#627570; --accent:#087f70; --line:#dce6e1; --paper:#fff; }
+        * { box-sizing:border-box; }
+        html { scroll-behavior:smooth; scroll-padding-top:24px; }
+        body { margin:0; padding:clamp(16px,3vw,40px); background:#f2f5f1; color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+        h1,h2,h3,h4,p { margin-top:0; }
+        .app-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:24px; border-bottom:1px solid var(--line); margin-bottom:24px; }
+        .brand { display:flex; align-items:center; gap:14px; }
+        .brand-mark { display:grid; place-items:center; width:48px; height:48px; border-radius:16px; background:var(--accent); color:white; font-size:26px; font-weight:800; }
+        h1 { font-size:clamp(25px,3vw,34px); letter-spacing:-1px; margin:0; }
+        .subtitle { color:var(--muted); margin:3px 0 0; font-size:14px; }
+        nav { display:flex; gap:8px; flex-wrap:wrap; }
+        nav a { color:var(--ink); text-decoration:none; background:white; border:1px solid var(--line); padding:9px 15px; border-radius:12px; font-size:14px; font-weight:600; }
+        nav a:hover { background:#e0f1eb; border-color:#9bcfc0; }
+        .section-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin:0 0 12px; }
+        .section-heading h2 { font-size:20px; margin:0; letter-spacing:-.4px; }
+        .section-heading span { color:var(--muted); font-size:13px; }
+        .calendario-contenedor { display:flex; gap:14px; overflow-x:auto; padding:2px 2px 16px; scroll-snap-type:x proximity; scrollbar-color:#b6ccc3 transparent; }
+        .calendario-mes { flex:0 0 250px; padding:18px; border:1px solid var(--line); background:var(--paper); border-radius:18px; scroll-snap-align:start; }
+        .calendario-mes h3 { font-size:16px; margin-bottom:12px; text-align:left; text-transform:capitalize; }
+        .calendario-mes table { width:100%; text-align:center; border-collapse:separate; border-spacing:2px; font-size:13px; font-variant-numeric:tabular-nums; }
+        .calendario-mes th { color:var(--muted); font-size:11px; padding-bottom:8px; font-weight:600; }
+        .calendario-mes td { height:29px; width:29px; border-radius:9px; }
+        .calendario-mes td:nth-last-child(-n+2) { color:#8b6857; }
+        .calendario-mes .hoy { background:var(--accent); color:white !important; font-weight:750; }
+        .herramientas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin:10px 0 18px; }
+        .form-section,.descarga-container { background:var(--paper); border:1px solid var(--line); padding:clamp(20px,2vw,28px); border-radius:22px; min-width:0; }
+        .card-heading { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+        .card-icon { width:42px; height:42px; display:grid; place-items:center; flex-shrink:0; border-radius:13px; background:#e2f2ec; color:var(--accent); font-size:23px; font-weight:700; }
+        h4 { font-size:19px; margin:0; letter-spacing:-.4px; }
+        .card-heading p { margin:2px 0 0; color:var(--muted); font-size:13px; }
+        form { margin:0; }
+        label { display:block; font-size:13px; font-weight:650; margin-bottom:7px; }
+        input,select,button { font:inherit; }
+        input,select { width:100%; min-width:0; height:50px; border:1px solid #cedbd4; border-radius:12px; padding:12px 14px; color:var(--ink); background:#fafcf9; margin-bottom:14px; }
+        input::placeholder { color:#83928a; }
+        button { width:100%; min-height:48px; border:0; border-radius:12px; padding:12px 18px; background:var(--accent); color:#fff; font-weight:650; cursor:pointer; transition:background .18s; }
+        button:hover { background:#066757; }
+        button:disabled { opacity:.6; cursor:wait; }
+        input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible { outline:3px solid #8ed6c1; outline-offset:3px; }
+        .resultado { margin:14px 0 0; background:#edf6f0; padding:12px 14px; border-radius:12px; font-size:14px; overflow-wrap:anywhere; }
+        .error { color:#a62d38; background:#fff0ee; padding:12px; border-radius:12px; }
+        .contador { font-weight:700; color:var(--accent); }
+        .descarga-container { margin-bottom:18px; }
+        .download-fields { display:grid; grid-template-columns:minmax(0,1fr) 180px; gap:16px; }
+        .descarga-container button { width:auto; min-width:200px; }
+        #resultado-msg { overflow-wrap:anywhere; font-size:14px; }
+        #resultado-msg:not(:empty) { margin-top:16px; padding:14px 16px; background:#edf6f0; border:1px solid #cee5d8; border-radius:12px; }
+        #resultado-msg[aria-busy="true"] { background:#f5f3e7; border-color:#e3ddbb; }
+        #resultado-msg a { color:var(--accent); font-weight:700; }
+        footer { color:var(--muted); font-size:12px; text-align:center; padding-top:8px; }
+        @media(max-width:650px) { .app-header { align-items:flex-start; flex-direction:column; gap:16px; } nav { width:100%; } nav a { flex:1; text-align:center; padding:8px; } .herramientas,.download-fields { grid-template-columns:1fr; } .download-fields { gap:0; } .descarga-container button { width:100%; } .section-heading span { display:none; } }
+        @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } button { transition:none; } }
+    
+/* Diseño compacto común a web y WebView; equivalente al cliente nativo. */
+[hidden] { display:none !important; }
+body { padding:12px; font-size:14px; line-height:1.45; }
+.app-header { display:block; padding:0; border:0; margin:4px 0 16px; }
+.brand { gap:12px; margin-bottom:20px; }
+h1 { font-size:24px; letter-spacing:0; }
+.brand-mark { width:48px; height:48px; }
+.subtitle { font-size:12px; }
+nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; width:100%; }
+nav a { min-width:0; min-height:36px; display:grid; place-items:center; padding:8px 4px; border-radius:12px; font-size:12px; font-weight:500; background:transparent; color:var(--muted); border-color:#b7c8be; }
+nav a[aria-current="page"] { background:#e2f2ec; border-color:#e2f2ec; color:var(--ink); }
+nav a[aria-disabled="true"] { opacity:.55; pointer-events:none; }
+.herramientas { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:start; margin:0; }
+.form-section { padding:12px; border:0; }
+.card-heading { gap:6px; margin-bottom:10px; align-items:center; }
+.form-section .card-heading h4 { font-size:14px; font-weight:600; letter-spacing:0; }
+.form-section .card-heading p { display:none; }
+.card-icon { width:18px; height:24px; background:transparent; border-radius:0; font-size:20px; }
+.form-section label,.descarga-container label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+input:not([type="hidden"]), select { height:46px; font-size:14px; padding:10px; margin-bottom:8px; background:white; border-color:var(--line); }
+button { font-size:14px; font-weight:500; min-height:44px; padding:10px; }
+.form-section form { width:100%; }
+.resultado { font-size:12px; margin:10px 0 0; padding:8px; }
+.descarga-container { border:0; padding:14px; margin:0; }
+.descarga-container .card-heading { margin-bottom:12px; }
+.descarga-container .card-heading h4 { font-size:20px; }
+.descarga-container .card-icon { display:none; }
+.descarga-container .card-heading p { margin-top:8px; font-size:14px; }
+.descarga-container form { display:flex; flex-direction:column; gap:8px; }
+.download-fields { display:block; order:0; }
+.descarga-container button[type="submit"] { width:100%; min-width:0; order:2; }
+.formato-opciones { display:flex; gap:12px; order:1; margin:2px 0 4px; }
+.formato-opciones button { width:auto; min-height:36px; background:transparent; border:1px solid #b7c8be; color:var(--ink); border-radius:10px; padding:7px 14px; }
+.formato-opciones button[aria-pressed="true"] { background:#e2f2ec; border-color:#e2f2ec; }
+#calendario { background:white; border-radius:22px; padding:20px; }
+.section-heading span { display:none; }
+.calendario-mes { flex-basis:220px; border:0; padding:10px; border-radius:12px; }
+.calendario-mes h3 { font-size:17px; text-align:center; }
+.calendario-mes td { border-radius:50%; }
+footer { font-size:11px; padding:20px 0 8px; }
+@media(max-width:650px) { .app-header { display:block; } .herramientas { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:320px) { body { padding:8px; } .form-section { padding:8px; } nav a { font-size:11px; } .card-icon { display:none; } }

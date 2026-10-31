@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Todo · Tus herramientas</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='3') }}">
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">t.</span><div><h1>Tus herramientas</h1><p class="subtitle">Tu día, un poco más fácil.</p></div></div>
+        <nav aria-label="Herramientas"><a href="#calendario">Calendario</a><a href="#edad">Calculadoras</a><a href="#descargar-form">Descargas</a></nav>
+    </header>
+    <section id="calendario" aria-label="Calendario anual">
+    <div class="section-heading"><h2>Calendario {{ ahora.year }}</h2><span>Desliza para explorar los meses →</span></div>
+
+    <div class="calendario-contenedor">
+        {% for mes in meses %}
+        <div class="calendario-mes">
+            <h3>{{ mes.nombre }}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>L</th>
+                        <th>M</th>
+                        <th>MI</th>
+                        <th>J</th>
+                        <th>V</th>
+                        <th>S</th>
+                        <th>D</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for semana in mes.semanas %}
+                    <tr>
+                        {% for dia in semana %}
+                        {% if dia == 0 %}
+                        <td></td>
+                        {% elif dia == ahora.day and mes.mes_numero == ahora.month %}
+                        <td class="hoy">{{ dia }}</td>
+                        {% else %}
+                        <td>{{ dia }}</td>
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
+    </section>
+
+    {% if msg %}<p class="error" role="alert">{{ msg }}</p>{% endif %}
+    <!-- ===== edad y signo ====== -->
+    <div class="herramientas">
+        <div class="form-section" id="edad">
+            <!--<div style="width:40%;" id="edad">-->
+            <div class="card-heading"><span class="card-icon" aria-hidden="true">✦</span><div><h4>Edad y signo</h4><p>Conoce tu edad y tu próximo cumpleaños.</p></div></div>
+
+            <form method="POST" action="#edad">
+                {{ f1.hidden_tag() }}
+                <input type="hidden" name="accion" value="edad">
+                <label for="{{ f1.fecha.id }}">Fecha de nacimiento</label>
+                {{ f1.fecha(placeholder="dd/mm/aaaa") }}
+                <button type="submit">Calcular</button>
+            </form>
+
+
+
+            {% if edad_anos is not none %}
+            <p class="resultado">
+                Edad: {{ edad_anos }} años,
+                {{ edad_meses }} meses,
+                {{ edad_dias }} días
+            </p>
+            {% endif %}
+
+            {% if signo %}
+            <p class="resultado">Signo: {{ signo }}</p>
+            {% endif %}
+
+            {% if fn %}
+            <p class="resultado">Nacimiento: {{ fn }}</p>
+            {% endif %}
+
+            {% if cumple %}
+            <p class="resultado">Próximo cumpleaños: {{ cumple }}</p>
+            {% endif %}
+
+            {% if diff_data %}
+            <p class="resultado">
+                Falta:
+                <span id="contador" class="contador"></span>
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- ===== descuento ===== -->
+        <div class="form-section" id="descuento">
+            <div class="card-heading"><span class="card-icon" aria-hidden="true">%</span><div><h4>Descuentos</h4><p>Calcula cuánto pagarás por tu compra.</p></div></div>
+
+            <form method="POST" action="#descuento">
+                {{ f2.hidden_tag() }}
+                <input type="hidden" name="accion" value="descuento">
+                <label for="{{ f2.monto.id }}">Precio original</label>
+                {{ f2.monto(step="0.01", placeholder="Monto") }}
+                <label for="{{ f2.porc.id }}">Descuento (%)</label>
+                {{ f2.porc(step="0.01", placeholder="Porcentaje %") }}
+                <button type="submit">Calcular</button>
+            </form>
+
+            {% if descuento is not none %}
+            <p class="resultado">
+                Total con descuento: {{ "%.2f"|format(descuento) }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ================== DESCARGAS ================== -->
+    <div class="descarga-container" id="descargar-form">
+        <div class="card-heading"><span class="card-icon" aria-hidden="true">↓</span><div><h4>Descargar video o audio</h4><p>Pega un enlace y elige el formato que necesitas.</p></div></div>
+        <!--<form method="POST" action="/descargar">      esto ya lo maneja ajax -->
+        <form>
+            <div class="download-fields">
+            <div class="form-group">
+                <label for="url">Enlace del contenido</label>
+                <input type="url" id="url" name="url" required placeholder="https://www.ejemplo.com/video">
+            </div>
+            <div class="form-group">
+                <label for="download_type">Formato</label>
+                <select id="download_type" name="download_type">
+                    <option value="video">Video</option>
+                    <option value="audio">Audio</option>
+                </select>
+            </div>
+            </div>
+            <button type="submit">↓ &nbsp; Descargar archivo</button>
+        </form>
+
+        <div id="resultado-msg" role="status" aria-live="polite"></div>
+        <!-- Div donde se mostrará el mensaje -->
+    </div>
+
+    <footer>Todo · Calendario, cálculos y descargas en un solo lugar.</footer>
+
+    {% if diff_data %}
+    <script>
+        const destino = {{ diff_data | tojson }};
+        const contador = document.getElementById("contador");
+        const actualizar = () => {
+            const segundos = Math.max(0, Math.floor((destino.target - Date.now()) / 1000));
+            contador.textContent = segundos === 0 ? "¡Feliz cumpleaños!" :
+                `${Math.floor(segundos / 86400)}d ${Math.floor(segundos / 3600) % 24}h ${Math.floor(segundos / 60) % 60}m ${segundos % 60}s`;
+        };
+        actualizar();
+        setInterval(actualizar, 1000);
+    </script>
+    {% endif %}
+    <script>
+        const form = document.querySelector("#descargar-form form");
+        const mensaje = document.getElementById("resultado-msg");
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const boton = form.querySelector("button");
+            boton.disabled = true;
+            mensaje.textContent = "Descargando y procesando…";
+            mensaje.setAttribute("aria-busy", "true");
+            try {
+                const respuesta = await fetch({{ url_for('descargas_ok.descargax') | tojson }}, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json", "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content},
+                    body: JSON.stringify({url: form.elements.url.value.trim(), download_type: form.elements.download_type.value})
+                });
+                const datos = respuesta.headers.get("content-type")?.includes("application/json") ? await respuesta.json() : null;
+                if (!respuesta.ok || datos?.status !== "success") throw new Error(datos?.msg || "No se pudo completar la solicitud. Recarga la página e inténtalo de nuevo.");
+                mensaje.textContent = datos.msg;
+                // En Render el servidor solo mantiene un temporal: guardarlo en el navegador.
+                if (datos.download_to_browser && datos.download_url) {
+                    const destino = new URL(datos.download_url, window.location.href);
+                    if (destino.origin !== window.location.origin) throw new Error("La URL del archivo no pertenece a esta app.");
+                    const enlace = document.createElement("a");
+                    enlace.href = destino.href;
+                    enlace.download = datos.file_name;
+                    enlace.textContent = "Guardar archivo";
+                    mensaje.append(" ", enlace);
+                    enlace.click();
+                }
+            } catch (error) {
+                mensaje.textContent = error.message;
+            } finally {
+                boton.disabled = false;
+                mensaje.setAttribute("aria-busy", "false");
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='todo-compacto.js', v='3') }}"></script>
+</body>
+</html>
