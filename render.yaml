@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: todo-web
+    name: todo_web
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
