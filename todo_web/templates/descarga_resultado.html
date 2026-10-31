@@ -21,9 +21,26 @@
         </nav>
     </header>
     <main class="descarga-container resultado-descarga">
-        <div class="card-heading"><div><h2>{% if estado == 'success' %}{{ msg }}{% else %}No se pudo descargar{% endif %}</h2></div></div>
-        {% if estado != 'success' %}<p class="mensaje-descarga" role="status">{{ msg }}</p>{% endif %}
-        <a class="volver-link" href="{{ url_for('calendario.calendario_app', panel='descargas') }}">Volver a descargas</a>
+        {% if msg %}<p class="mensaje-descarga" role="status">{{ msg }}</p>{% endif %}
+        <div class="card-heading">
+            <div><h2>Descargar video o audio</h2><p>Pega un enlace y elige el formato.</p></div>
+        </div>
+        <form method="post" action="{{ url_for('descargas_ok.descargax') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="destination" value="web">
+            <div class="download-fields">
+                <div class="form-group">
+                    <label for="url">Enlace del contenido</label>
+                    <input type="url" id="url" name="url" required maxlength="4096" placeholder="Enlace del video o audio" autocomplete="url">
+                </div>
+            </div>
+            <fieldset class="formato-opciones">
+                <legend>Formato</legend>
+                <label><input type="radio" name="download_type" value="video" checked><span>Video</span></label>
+                <label><input type="radio" name="download_type" value="audio"><span>Audio</span></label>
+            </fieldset>
+            <button type="submit">↓ &nbsp; Descargar archivo</button>
+        </form>
     </main>
     <footer>Todo · Hecho para tu día a día</footer>
 </body>
