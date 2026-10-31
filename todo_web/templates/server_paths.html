@@ -20,7 +20,7 @@
         </nav>
     </header>
     <main class="descarga-container">
-        <div class="card-heading"><div><h2>Archivos y carpetas de la app en Render</h2><p>Ruta solicitada: {{ raiz }}</p><p>Ruta física real en Render: {{ raiz_real }}</p></div></div>
+        <div class="card-heading"><div><h2>Archivos y carpetas de la app en Render</h2><p>Ruta física del proyecto: {{ raiz }}</p></div></div>
         <ul class="server-rutas server-info">
             <li><strong>Descargas temporales:</strong> <code>{{ carpeta_temporal }}/&lt;token&gt;/&lt;archivo&gt;</code> — Render elimina la copia después de enviarla.</li>
             <li><strong>FFmpeg (procesa y combina el archivo):</strong> <code>{{ ruta_ffmpeg }}</code></li>
