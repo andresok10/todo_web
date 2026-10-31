@@ -91,6 +91,7 @@
             <li><strong>FFmpeg (procesa y combina el archivo):</strong> <code>{{ ruta_ffmpeg }}</code></li>
             <li><strong>Node.js (runtime JavaScript de yt-dlp):</strong> <code>{{ ruta_node }}</code></li>
         </ul>
+        <p class="resultado">yt-dlp puede pedir Deno al ejecutarse con su configuración predeterminada o fuera de Flask. Esta app configura Node.js para resolver los desafíos de YouTube. La PC y Render necesitan tener su propio runtime; FFmpeg procesa y combina los archivos, no reemplaza a Node.js.</p>
         <h3>Rutas del proyecto</h3>
         <ul class="server-rutas">
             {% for elemento in rutas %}
