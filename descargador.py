@@ -6,7 +6,7 @@ import tempfile
 import time
 from ipaddress import ip_address
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -171,22 +171,31 @@ def descargax():
                 shutil.rmtree(vieja, ignore_errors=True)
     reserva = carpeta / f"{identificador}.reserve"
     reserva.touch(exist_ok=False)
+    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
     try:
         with YoutubeDL(
-            {
-                "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
-                "noplaylist": True,
-                "ffmpeg_location": ffmpeg,
-                "js_runtimes": {"node": {}},
-                "quiet": True,
-                "no_warnings": True,
-                "socket_timeout": 30,
-                "retries": 2,
-                "max_filesize": 500 * 1024 * 1024,
-                "format": "bestaudio/best" if tipo == "audio" else "bestvideo+bestaudio/best",
-                "postprocessors": ([{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}] if tipo == "audio" else []),
-                "merge_output_format": "mkv",
-            }
+            cast(
+                Any,
+                {
+                    "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
+                    "noplaylist": True,
+                    "ffmpeg_location": ffmpeg,
+                    **(
+                        {"cookiefile": cookies_file}
+                        if cookies_file and Path(cookies_file).is_file()
+                        else {}
+                    ),
+                    "js_runtimes": {"node": {}},
+                    "quiet": True,
+                    "no_warnings": True,
+                    "socket_timeout": 30,
+                    "retries": 2,
+                    "max_filesize": 500 * 1024 * 1024,
+                    "format": "bestaudio/best" if tipo == "audio" else "bestvideo+bestaudio/best",
+                    "postprocessors": ([{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}] if tipo == "audio" else []),
+                    "merge_output_format": "mkv",
+                },
+            )
         ) as ydl:
             ydl.extract_info(url, download=True)
         archivos = [
@@ -208,7 +217,7 @@ def descargax():
                 "file_name": archivo.name,
             },
         )
-    except (DownloadError, OSError):
+    except (DownloadError, OSError) as error:
         current_app.logger.exception("Falló la descarga multimedia")
         for parcial in carpeta.glob(f"{identificador}.*"):
             if parcial.is_file():
@@ -218,7 +227,15 @@ def descargax():
                     current_app.logger.warning("No se pudo eliminar el archivo parcial: %s", parcial)
         if token:
             shutil.rmtree(carpeta, ignore_errors=True)
-        return respuesta("error", "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp.", 502)
+        detalle = str(error).lower()
+        if isinstance(error, DownloadError) and "sign in to confirm" in detalle:
+            mensaje = (
+                "YouTube bloqueó la descarga desde Render. Configura un archivo de cookies "
+                "de YouTube como secreto y define YOUTUBE_COOKIES_FILE."
+            )
+        else:
+            mensaje = "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp."
+        return respuesta("error", mensaje, 502)
     finally:
         try:
             reserva.unlink(missing_ok=True)
