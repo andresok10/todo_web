@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo · Tus herramientas</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='5') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='6') }}">
 </head>
 <body>
     <header class="app-header">
@@ -16,6 +16,7 @@
             <a href="{{ url_for('calendario.calendario_app', panel='calculadoras') }}"{% if panel == 'calculadoras' %} aria-current="page"{% endif %}>Calculadoras</a>
             <a href="{{ url_for('calendario.calendario_app', panel='descargas') }}"{% if panel == 'descargas' %} aria-current="page"{% endif %}>Descargas</a>
             <a href="{{ url_for('calendario.calendario_app', panel='calendario') }}"{% if panel == 'calendario' %} aria-current="page"{% endif %}>Calendario</a>
+            <a href="{{ url_for('descargas_ok.listar_rutas_servidor') }}">Server</a>
         </nav>
     </header>
 

@@ -34,6 +34,22 @@ def csrf_token_app():
     return respuesta
 
 
+@app2.route("/server", methods=["GET"])
+def listar_rutas_servidor():
+    carpetas_excluidas = {".git", "__pycache__", ".venv", "venv"}
+    rutas: list[dict[str, str]] = []
+    for carpeta, directorios, archivos in os.walk(BASE_DIR, topdown=True, followlinks=False):
+        directorios[:] = sorted(nombre for nombre in directorios if nombre not in carpetas_excluidas)
+        ruta_carpeta = Path(carpeta).resolve()
+        rutas.append({"tipo": "Carpeta", "ruta": str(ruta_carpeta)})
+        for nombre in sorted(archivos):
+            nombre_minusculas = nombre.lower()
+            if nombre == ".env" or "cookie" in nombre_minusculas or "secret" in nombre_minusculas or nombre.endswith(".pyc"):
+                continue
+            rutas.append({"tipo": "Archivo", "ruta": str((ruta_carpeta / nombre).resolve())})
+    return render_template("server_paths.html", rutas=rutas, raiz=str(BASE_DIR))
+
+
 @app2.route("/descarga", methods=["POST"])
 def descargax():
     es_formulario = not request.is_json
