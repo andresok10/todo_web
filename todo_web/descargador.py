@@ -215,7 +215,7 @@ def descargax():
         if len(archivos) != 1 or archivos[0].stat().st_size == 0:
             raise DownloadError("No se generó un archivo multimedia completo.")
         archivo = archivos[0]
-        mensaje = "Video descargado" if tipo == "video" else "Audio descargado"
+        mensaje = f"{archivo.name} descargado"
         return respuesta(
             "success",
             mensaje,
