@@ -182,7 +182,7 @@ def descargax():
         archivo = archivos[0]
         if token and destino == "web":
             mensaje = (
-                f"{archivo.name} está listo. Pulsa Guardar para descargarlo en la carpeta "
+                f"Descarga iniciada automáticamente: {archivo.name}. Se guardará en la carpeta "
                 "Descargas de tu dispositivo o en la ubicación configurada en el navegador. "
                 "Render elimina su copia temporal después de enviarla."
             )

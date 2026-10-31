@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if estado == 'success' and download_url %}<meta http-equiv="refresh" content="1;url={{ download_url }}">{% endif %}
     <title>Descarga · Todo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='5') }}">
 </head>
@@ -21,9 +22,6 @@
     <main class="descarga-container resultado-descarga">
         <div class="card-heading"><div><h2>{% if estado == 'success' %}Descarga lista{% else %}No se pudo descargar{% endif %}</h2></div></div>
         <p class="mensaje-descarga" role="status">{{ msg }}</p>
-        {% if estado == 'success' and download_url and file_name %}
-        <a class="download-link" href="{{ download_url }}" download="{{ file_name }}">Guardar {{ file_name }}</a>
-        {% endif %}
         <a class="volver-link" href="{{ url_for('calendario.calendario_app', panel='descargas') }}">Volver a descargas</a>
     </main>
     <footer>Todo · Hecho para tu día a día</footer>
