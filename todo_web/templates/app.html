@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if panel == 'descarga_resultado' and estado == 'success' and download_url %}<meta http-equiv="refresh" content="1;url={{ download_url }}">{% endif %}
     <title>Todo · Tus herramientas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='8') }}">
 </head>
@@ -14,9 +15,9 @@
         </div>
         <nav aria-label="Herramientas">
             <a href="{{ url_for('calendario.calendario_app', panel='calculadoras') }}"{% if panel == 'calculadoras' %} aria-current="page"{% endif %}>Calculadoras</a>
-            <a href="{{ url_for('calendario.calendario_app', panel='descargas') }}"{% if panel == 'descargas' %} aria-current="page"{% endif %}>Descargas</a>
+            <a href="{{ url_for('calendario.calendario_app', panel='descargas') }}"{% if panel in ('descargas', 'descarga_resultado') %} aria-current="page"{% endif %}>Descargas</a>
             <a href="{{ url_for('calendario.calendario_app', panel='calendario') }}"{% if panel == 'calendario' %} aria-current="page"{% endif %}>Calendario</a>
-            <a href="{{ url_for('descargas_ok.listar_rutas_servidor') }}">Server</a>
+            <a href="{{ url_for('descargas_ok.listar_rutas_servidor') }}"{% if panel == 'server' %} aria-current="page"{% endif %}>Server</a>
         </nav>
     </header>
 
@@ -59,8 +60,9 @@
             {% if descuento is not none %}<p class="resultado">Total: ${{ "%.2f"|format(descuento) }}</p>{% endif %}
         </section>
     </main>
-    {% elif panel == 'descargas' %}
+    {% elif panel in ('descargas', 'descarga_resultado') %}
     <main class="descarga-container" id="descargar-form">
+        {% if panel == 'descarga_resultado' and msg %}<p class="mensaje-descarga" role="status">{{ msg }}</p>{% endif %}
         <div class="card-heading">
             <div><h2>Descargar video o audio</h2><p>Pega un enlace y elige el formato.</p></div>
         </div>
@@ -80,6 +82,21 @@
             </fieldset>
             <button type="submit">↓ &nbsp; Descargar archivo</button>
         </form>
+    </main>
+    {% elif panel == 'server' %}
+    <main class="descarga-container">
+        <div class="card-heading"><div><h2>Archivos y carpetas de la app en Render</h2><p>Ruta física del proyecto: {{ raiz }}</p></div></div>
+        <ul class="server-rutas server-info">
+            <li><strong>Descargas temporales:</strong> <code>{{ carpeta_temporal }}/&lt;token&gt;/&lt;archivo&gt;</code> — Render elimina la copia después de enviarla.</li>
+            <li><strong>FFmpeg (procesa y combina el archivo):</strong> <code>{{ ruta_ffmpeg }}</code></li>
+            <li><strong>Node.js (runtime JavaScript de yt-dlp):</strong> <code>{{ ruta_node }}</code></li>
+        </ul>
+        <h3>Rutas del proyecto</h3>
+        <ul class="server-rutas">
+            {% for elemento in rutas %}
+            <li><code>{{ elemento.ruta }}</code></li>
+            {% endfor %}
+        </ul>
     </main>
     {% else %}
     <main>

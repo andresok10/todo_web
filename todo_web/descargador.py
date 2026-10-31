@@ -59,7 +59,8 @@ def listar_rutas_servidor():
     )
     ruta_node = shutil.which("node") or "No detectado"
     return render_template(
-        "server_paths.html",
+        "app.html",
+        panel="server",
         rutas=rutas,
         raiz=str(BASE_DIR),
         carpeta_temporal=str(TEMPORALES_ANDROID),
@@ -83,7 +84,8 @@ def descargax():
             contenido.update(datos)
         if es_formulario:
             return render_template(
-                "descarga_resultado.html",
+                "app.html",
+                panel="descarga_resultado",
                 estado=estado,
                 msg=mensaje,
                 download_url=contenido.get("download_url"),
