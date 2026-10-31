@@ -118,19 +118,14 @@ def descargax():
         # Solo plataformas conocidas: impide usar la app para consultar servicios internos.
         host = (partes.hostname or "").lower()
         dominios = ("youtube.com", "youtu.be", "facebook.com", "fb.watch", "tiktok.com", "instagram.com", "vimeo.com")
-        if (
-            partes.scheme not in ("https", "http")
-            or partes.username
-            or partes.password
-            or partes.port not in (None, 80, 443)
-        ):
+        if partes.scheme not in ("https", "http") or partes.username or partes.password or partes.port not in (None, 80, 443):
             raise ValueError
         if not any(host == d or host.endswith("." + d) for d in dominios):
             raise ValueError
         direcciones = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
         if not direcciones or any(not ip_address(item[4][0]).is_global for item in direcciones):
             raise ValueError
-    except (ValueError, OSError):
+    except ValueError, OSError:
         return respuesta("error", "Usa una URL pública de YouTube, Facebook, TikTok, Instagram o Vimeo.", 400)
     candidatos = [
         os.environ.get("FFMPEG_LOCATION"),
@@ -188,11 +183,7 @@ def descargax():
                     "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
                     "noplaylist": True,
                     "ffmpeg_location": ffmpeg,
-                    **(
-                        {"cookiefile": cookies_buffer}
-                        if cookies_buffer is not None
-                        else {}
-                    ),
+                    **({"cookiefile": cookies_buffer} if cookies_buffer is not None else {}),
                     "js_runtimes": {"node": {}},
                     "quiet": True,
                     "no_warnings": True,
@@ -208,11 +199,7 @@ def descargax():
             ydl.extract_info(url, download=True)
             if cookies_buffer is not None:
                 cookies_buffer.seek(0)
-        archivos = [
-            f
-            for f in carpeta.glob(f"{identificador}.*")
-            if f.is_file() and f.suffix in (".m4a", ".mp4", ".mkv", ".webm", ".mov", ".flv", ".3gp", ".ogg", ".mp3")
-        ]
+        archivos = [f for f in carpeta.glob(f"{identificador}.*") if f.is_file() and f.suffix in (".m4a", ".mp4", ".mkv", ".webm", ".mov", ".flv", ".3gp", ".ogg", ".mp3")]
         if len(archivos) != 1 or archivos[0].stat().st_size == 0:
             raise DownloadError("No se generó un archivo multimedia completo.")
         archivo = archivos[0]
@@ -240,10 +227,7 @@ def descargax():
             shutil.rmtree(carpeta, ignore_errors=True)
         detalle = str(error).lower()
         if isinstance(error, DownloadError) and "sign in to confirm" in detalle:
-            mensaje = (
-                "YouTube bloqueó la descarga desde Render. Configura un archivo de cookies "
-                "de YouTube como secreto y define YOUTUBE_COOKIES_FILE."
-            )
+            mensaje = "YouTube bloqueó la descarga desde Render. Configura un archivo de cookies de YouTube como secreto y define YOUTUBE_COOKIES_FILE."
         else:
             mensaje = "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp."
         return respuesta("error", mensaje, 502)
