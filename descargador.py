@@ -5,6 +5,7 @@ import socket
 import tempfile
 import threading
 import time
+from io import StringIO
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any, cast
@@ -140,7 +141,10 @@ def descargax():
     reserva = carpeta / f"{identificador}.reserve"
     reserva.touch(exist_ok=False)
     cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+    cookies_buffer: StringIO | None = None
     try:
+        if cookies_file and Path(cookies_file).is_file():
+            cookies_buffer = StringIO(Path(cookies_file).read_text(encoding="utf-8"))
         with YoutubeDL(
             cast(
                 Any,
@@ -149,8 +153,8 @@ def descargax():
                     "noplaylist": True,
                     "ffmpeg_location": ffmpeg,
                     **(
-                        {"cookiefile": cookies_file}
-                        if cookies_file and Path(cookies_file).is_file()
+                        {"cookiefile": cookies_buffer}
+                        if cookies_buffer is not None
                         else {}
                     ),
                     "js_runtimes": {"node": {}},
@@ -166,6 +170,8 @@ def descargax():
             )
         ) as ydl:
             ydl.extract_info(url, download=True)
+            if cookies_buffer is not None:
+                cookies_buffer.seek(0)
         archivos = [
             f
             for f in carpeta.glob(f"{identificador}.*")
@@ -205,6 +211,8 @@ def descargax():
             mensaje = "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp."
         return respuesta("error", mensaje, 502)
     finally:
+        if cookies_buffer is not None:
+            cookies_buffer.close()
         try:
             reserva.unlink(missing_ok=True)
         except OSError:
