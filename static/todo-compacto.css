@@ -147,6 +147,7 @@ input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible
 .server-rutas { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .server-rutas li { min-width: 0; padding: 8px; border-radius: 10px; background: #f2f5f1; overflow-wrap: anywhere; }
 .server-rutas code { overflow-wrap: anywhere; }
+.server-info { margin-bottom: 16px; }
 .download-link, .volver-link { display: flex; min-height: 44px; align-items: center; justify-content: center; margin-top: 8px; padding: 10px 14px; border-radius: 12px; font-weight: 600; text-align: center; text-decoration: none; }
 .download-link { background: var(--accent); color: #fff; }
 .volver-link { border: 1px solid var(--line); background: #fff; color: var(--ink); }

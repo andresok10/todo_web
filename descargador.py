@@ -47,7 +47,25 @@ def listar_rutas_servidor():
             if nombre == ".env" or "cookie" in nombre_minusculas or "secret" in nombre_minusculas or nombre.endswith(".pyc"):
                 continue
             rutas.append({"tipo": "Archivo", "ruta": str((ruta_carpeta / nombre).resolve())})
-    return render_template("server_paths.html", rutas=rutas, raiz=str(BASE_DIR))
+    candidatos_ffmpeg = [
+        os.environ.get("FFMPEG_LOCATION"),
+        shutil.which("ffmpeg"),
+        BASE_DIR / "ffmpeg" / "bin" / "ffmpeg",
+        BASE_DIR / "ffmpeg" / "ffmpeg",
+    ]
+    ruta_ffmpeg = next(
+        (str(Path(ruta).resolve()) for ruta in candidatos_ffmpeg if ruta and Path(ruta).is_file()),
+        "No detectado",
+    )
+    ruta_node = shutil.which("node") or "No detectado"
+    return render_template(
+        "server_paths.html",
+        rutas=rutas,
+        raiz=str(BASE_DIR),
+        carpeta_temporal=str(TEMPORALES_ANDROID),
+        ruta_ffmpeg=ruta_ffmpeg,
+        ruta_node=ruta_node,
+    )
 
 
 @app2.route("/descarga", methods=["POST"])
