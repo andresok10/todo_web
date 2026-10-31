@@ -25,6 +25,16 @@ TEMPORALES_ANDROID = Path(tempfile.gettempdir()) / "todo4-android"
 TEMP_TTL_SECONDS = 3600
 CONTADORES_DESCARGAS = {"audio": 0, "video": 0}
 LOCK_CONTADORES = threading.Lock()
+CANDIDATOS_FFMPEG = (
+    os.environ.get("FFMPEG_LOCATION"),
+    shutil.which("ffmpeg"),
+    BASE_DIR / "ffmpeg" / "bin" / "ffmpeg.exe",
+    BASE_DIR / "ffmpeg" / "ffmpeg.exe",
+    BASE_DIR / "ffmpeg" / "ffmpeg",
+)
+FFMPEG = next((str(Path(ruta).resolve()) for ruta in CANDIDATOS_FFMPEG if ruta and Path(ruta).is_file()), None)
+NODE = shutil.which("node")
+YT_DLP_JS_RUNTIMES = {"node": {"path": NODE}} if NODE else {"node": {}}
 
 
 @app2.route("/csrf-token", methods=["GET"])
@@ -47,44 +57,17 @@ def listar_rutas_servidor():
                 continue
             ruta_archivo = ruta_carpeta / nombre
             ruta_repo = ruta_archivo.relative_to(BASE_DIR).as_posix()
-            rutas.append(
-                {
-                    "ruta": str(ruta_archivo.resolve()),
-                    "github": f"https://github.com/andresok10/todo_web/blob/main/todo_web/{quote(ruta_repo)}",
-                }
-            )
-    candidatos_ffmpeg = [
-        os.environ.get("FFMPEG_LOCATION"),
-        shutil.which("ffmpeg"),
-        BASE_DIR / "ffmpeg" / "bin" / "ffmpeg",
-        BASE_DIR / "ffmpeg" / "ffmpeg",
-    ]
-    ruta_ffmpeg = next(
-        (str(Path(ruta).resolve()) for ruta in candidatos_ffmpeg if ruta and Path(ruta).is_file()),
-        "No detectado",
-    )
-    ruta_node = shutil.which("node") or "No detectado"
-    return render_template(
-        "app.html",
-        panel="server",
-        rutas=rutas,
-        raiz=str(BASE_DIR),
-        carpeta_temporal=str(TEMPORALES_ANDROID),
-        ruta_ffmpeg=ruta_ffmpeg,
-        ruta_node=ruta_node,
-    )
+            rutas.append({"ruta": str(ruta_archivo.resolve()), "github": f"https://github.com/andresok10/todo_web/blob/main/todo_web/{quote(ruta_repo)}"})
+    ruta_ffmpeg = FFMPEG or "No detectado"
+    ruta_node = NODE or "No detectado"
+    return render_template("app.html", panel="server", rutas=rutas, raiz=str(BASE_DIR), carpeta_temporal=str(TEMPORALES_ANDROID), ruta_ffmpeg=ruta_ffmpeg, ruta_node=ruta_node)
 
 
 @app2.route("/descarga", methods=["POST"])
 def descargax():
     es_formulario = not request.is_json
 
-    def respuesta(
-        estado: str,
-        mensaje: str,
-        codigo: int,
-        datos: dict[str, object] | None = None,
-    ) -> tuple[str | Response, int]:
+    def respuesta(estado: str, mensaje: str, codigo: int, datos: dict[str, object] | None = None) -> tuple[str | Response, int]:
         contenido: dict[str, object] = {"status": estado, "msg": mensaje}
         if datos is not None:
             contenido.update(datos)
@@ -133,15 +116,7 @@ def descargax():
             raise ValueError
     except ValueError, OSError:
         return respuesta("error", "Usa una URL pública de YouTube, Facebook, TikTok, Instagram o Vimeo.", 400)
-    candidatos = [
-        os.environ.get("FFMPEG_LOCATION"),
-        shutil.which("ffmpeg"),
-        BASE_DIR / "ffmpeg" / "bin" / "ffmpeg.exe",
-        BASE_DIR / "ffmpeg" / "ffmpeg.exe",
-        BASE_DIR / "ffmpeg" / "ffmpeg",
-    ]
-    ffmpeg = next((str(Path(c)) for c in candidatos if c and Path(c).is_file()), None)
-    if not ffmpeg:
+    if not FFMPEG:
         return respuesta("error", "Falta FFmpeg. Instálalo o configura FFMPEG_LOCATION con la ruta del ejecutable.", 503)
     CARPETA_DESCARGA.mkdir(parents=True, exist_ok=True)
     prefijo = "audio" if tipo == "audio" else "video"
@@ -188,9 +163,9 @@ def descargax():
                 {
                     "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
                     "noplaylist": True,
-                    "ffmpeg_location": ffmpeg,
+                    "ffmpeg_location": FFMPEG,
                     **({"cookiefile": cookies_buffer} if cookies_buffer is not None else {}),
-                    "js_runtimes": {"node": {}},
+                    "js_runtimes": YT_DLP_JS_RUNTIMES,
                     "quiet": True,
                     "no_warnings": True,
                     "socket_timeout": 30,

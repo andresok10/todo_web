@@ -4,7 +4,10 @@ services:
     runtime: python
     plan: free
     rootDir: todo_web
-    buildCommand: pip install -r requirements.txt
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      node -e 'console.log("Node.js", process.version); process.exit(Number(process.versions.node.split(".")[0]) < 22)' &&
+      command -v ffmpeg
     startCommand: 'gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 900 --access-logfile - --error-logfile - app:app'
     healthCheckPath: /
     envVars:
