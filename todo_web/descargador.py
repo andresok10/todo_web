@@ -9,7 +9,7 @@ from io import StringIO
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any, cast
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 from uuid import uuid4
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, url_for
@@ -46,7 +46,13 @@ def listar_rutas_servidor():
             if nombre == ".env" or "cookie" in nombre_minusculas or "secret" in nombre_minusculas or nombre.endswith(".pyc"):
                 continue
             ruta_archivo = ruta_carpeta / nombre
-            rutas.append({"ruta": str(ruta_archivo.resolve())})
+            ruta_repo = ruta_archivo.relative_to(BASE_DIR).as_posix()
+            rutas.append(
+                {
+                    "ruta": str(ruta_archivo.resolve()),
+                    "github": f"https://github.com/andresok10/todo_web/blob/main/todo_web/{quote(ruta_repo)}",
+                }
+            )
     candidatos_ffmpeg = [
         os.environ.get("FFMPEG_LOCATION"),
         shutil.which("ffmpeg"),

@@ -97,6 +97,13 @@
             <li><code>{{ elemento.ruta }}</code></li>
             {% endfor %}
         </ul>
+        <h3>Rutas del proyecto en GitHub</h3>
+        <p><a href="https://github.com/andresok10/todo_web/tree/main/todo_web" target="_blank" rel="noopener noreferrer">Abrir carpeta de la app en GitHub</a></p>
+        <ul class="server-rutas">
+            {% for elemento in rutas %}
+            <li><a href="{{ elemento.github }}" target="_blank" rel="noopener noreferrer"><code>{{ elemento.github }}</code></a></li>
+            {% endfor %}
+        </ul>
     </main>
     {% else %}
     <main>
