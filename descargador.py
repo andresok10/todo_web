@@ -38,15 +38,18 @@ def csrf_token_app():
 def listar_rutas_servidor():
     carpetas_excluidas = {".git", "__pycache__", ".venv", "venv"}
     rutas: list[dict[str, str]] = []
+    raiz_visible = Path("/opt/render/project/todo_web") if os.environ.get("RENDER") == "true" else BASE_DIR
     for carpeta, directorios, archivos in os.walk(BASE_DIR, topdown=True, followlinks=False):
         directorios[:] = sorted(nombre for nombre in directorios if nombre not in carpetas_excluidas)
         ruta_carpeta = Path(carpeta).resolve()
-        rutas.append({"tipo": "Carpeta", "ruta": str(ruta_carpeta)})
+        ruta_visible = raiz_visible / ruta_carpeta.relative_to(BASE_DIR)
+        rutas.append({"tipo": "Carpeta", "ruta": str(ruta_visible)})
         for nombre in sorted(archivos):
             nombre_minusculas = nombre.lower()
             if nombre == ".env" or "cookie" in nombre_minusculas or "secret" in nombre_minusculas or nombre.endswith(".pyc"):
                 continue
-            rutas.append({"tipo": "Archivo", "ruta": str((ruta_carpeta / nombre).resolve())})
+            ruta_archivo = ruta_carpeta / nombre
+            rutas.append({"tipo": "Archivo", "ruta": str(raiz_visible / ruta_archivo.relative_to(BASE_DIR))})
     candidatos_ffmpeg = [
         os.environ.get("FFMPEG_LOCATION"),
         shutil.which("ffmpeg"),
@@ -61,7 +64,8 @@ def listar_rutas_servidor():
     return render_template(
         "server_paths.html",
         rutas=rutas,
-        raiz=str(BASE_DIR),
+        raiz=str(raiz_visible),
+        raiz_real=str(BASE_DIR),
         carpeta_temporal=str(TEMPORALES_ANDROID),
         ruta_ffmpeg=ruta_ffmpeg,
         ruta_node=ruta_node,
