@@ -180,9 +180,19 @@ def descargax():
         if len(archivos) != 1 or archivos[0].stat().st_size == 0:
             raise DownloadError("No se generó un archivo multimedia completo.")
         archivo = archivos[0]
+        if token and destino == "web":
+            mensaje = (
+                f"{archivo.name} está listo. Pulsa Guardar para descargarlo en la carpeta "
+                "Descargas de tu dispositivo o en la ubicación configurada en el navegador. "
+                "Render elimina su copia temporal después de enviarla."
+            )
+        elif token:
+            mensaje = f"Descarga lista: {archivo.name}"
+        else:
+            mensaje = f"Archivo guardado en: {archivo}"
         return respuesta(
             "success",
-            f"Descarga lista: {archivo.name}" if token else f"Archivo guardado en: {archivo}",
+            mensaje,
             200,
             {
                 "download_url": url_for("descargas_ok.serve_download", output_file=archivo.name, token=token),
