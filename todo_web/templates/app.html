@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% if panel == 'descarga_progreso' and estado == 'processing' and estado_url %}<meta http-equiv="refresh" content="1;url={{ estado_url }}">{% elif panel == 'descarga_progreso' and estado == 'success' and download_url %}<meta http-equiv="refresh" content="4;url={{ download_url }}">{% endif %}
     <title>Todo · Tus herramientas</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='12') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='13') }}">
 </head>
 <body>
     <header class="app-header">
@@ -81,7 +81,7 @@
             </fieldset>
             <button type="submit">↓ &nbsp; Descargar archivo</button>
             {% if panel == 'descarga_resultado' and msg %}<p class="mensaje-descarga" role="status" aria-live="polite">{{ msg }}</p>{% endif %}
-            {% if panel == 'descarga_resultado' %}<progress class="download-progress" max="100" value="{{ progreso|default(0) }}" aria-label="Progreso de la descarga"></progress>{% else %}<progress class="download-progress" max="100" value="0" aria-label="Progreso de la descarga"></progress>{% endif %}
+            <progress class="download-progress" max="100" value="{{ progreso|default(0) }}" aria-label="Progreso de la descarga"></progress>
         </form>
     </main>
     {% elif panel == 'descarga_progreso' %}
