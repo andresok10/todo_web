@@ -26,7 +26,7 @@ class FormDescuento(FlaskForm):
 
 
 @app1.route("/", methods=["GET", "POST"])
-@app1.route("/api", methods=["GET", "POST"])
+@app1.route("/api", methods=["GET", "POST"], endpoint="api")
 def calendario_app():
     ahora = pendulum.now("America/Guayaquil")
     hoy = ahora.start_of("day")
