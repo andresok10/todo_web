@@ -177,6 +177,9 @@ footer { padding: 16px 0 8px; color: var(--muted); font-size: 11px; text-align: 
     nav a { font-size: 11px; }
     .form-section .card-icon { display: none; }
 }
+@media (max-width: 600px) {
+    .herramientas { grid-template-columns: minmax(0, 1fr); }
+}
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
