@@ -179,6 +179,8 @@ footer { padding: 16px 0 8px; color: var(--muted); font-size: 11px; text-align: 
 }
 @media (max-width: 600px) {
     .herramientas { grid-template-columns: minmax(0, 1fr); }
+    .calendario-contenedor { gap: 8px; scroll-snap-type: x mandatory; }
+    .calendario-mes { flex-basis: 100%; border: 1px solid var(--line); scroll-snap-align: start; }
 }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
