@@ -249,6 +249,8 @@ def serve_download(output_file, token=None):
         respuesta.headers["Cache-Control"] = "no-store"
         # Cierra primero el archivo y elimina después la copia temporal enviada.
         respuesta.direct_passthrough = False
-        respuesta.call_on_close(lambda: shutil.rmtree(temporal, ignore_errors=True))
+        limpieza = threading.Timer(30, shutil.rmtree, args=(temporal,), kwargs={"ignore_errors": True})
+        limpieza.daemon = True
+        respuesta.call_on_close(limpieza.start)
         return respuesta
     return send_from_directory(CARPETA_DESCARGA, output_file, as_attachment=True, conditional=True)
