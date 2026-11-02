@@ -87,7 +87,7 @@ def descargax():
                 "app.html",
                 panel="descarga_resultado",
                 estado=estado,
-                msg=mensaje,
+                msg=None if estado == "success" and "Web1App/1.0" in request.headers.get("User-Agent", "") else mensaje,
                 download_url=contenido.get("download_url"),
                 file_name=contenido.get("file_name"),
             ), codigo
@@ -245,12 +245,15 @@ def serve_download(output_file, token=None):
         if not re.fullmatch(r"[0-9a-f]{32}", token):
             return jsonify(status="error", msg="Archivo no encontrado."), 404
         temporal = TEMPORALES_ANDROID / token
-        respuesta = send_from_directory(temporal, output_file, as_attachment=True, conditional=False, max_age=0)
-        respuesta.headers["Cache-Control"] = "no-store"
+        respuesta_archivo = send_from_directory(temporal, output_file, as_attachment=True, conditional=False, max_age=0)
+        respuesta_archivo.headers["Cache-Control"] = "no-store"
+        respuesta_archivo.headers["X-Flask-Message"] = f"{output_file} descargado"
         # Cierra primero el archivo y elimina después la copia temporal enviada.
-        respuesta.direct_passthrough = False
+        respuesta_archivo.direct_passthrough = False
         limpieza = threading.Timer(30, shutil.rmtree, args=(temporal,), kwargs={"ignore_errors": True})
         limpieza.daemon = True
-        respuesta.call_on_close(limpieza.start)
-        return respuesta
-    return send_from_directory(CARPETA_DESCARGA, output_file, as_attachment=True, conditional=True)
+        respuesta_archivo.call_on_close(limpieza.start)
+        return respuesta_archivo
+    respuesta_archivo = send_from_directory(CARPETA_DESCARGA, output_file, as_attachment=True, conditional=True)
+    respuesta_archivo.headers["X-Flask-Message"] = f"{output_file} descargado"
+    return respuesta_archivo
