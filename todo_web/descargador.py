@@ -195,6 +195,10 @@ def descargax():
         if len(archivos) != 1 or archivos[0].stat().st_size == 0:
             raise DownloadError("No se generó un archivo multimedia completo.")
         archivo = archivos[0]
+        nombre_normalizado = carpeta / f"{identificador}{archivo.suffix.lower()}"
+        if archivo != nombre_normalizado:
+            archivo.rename(nombre_normalizado)
+            archivo = nombre_normalizado
         mensaje = f"{archivo.name} descargado"
         return respuesta(
             "success",
