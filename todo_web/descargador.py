@@ -79,6 +79,7 @@ def listar_rutas_servidor():
 @app2.route("/descarga", methods=["POST"])
 def descargax():
     es_formulario = not request.is_json
+    es_webview_android = es_formulario and " wv" in request.headers.get("User-Agent", "").lower()
 
     def respuesta(estado: str, mensaje: str, codigo: int, datos: dict[str, object] | None = None) -> tuple[str | Response, int]:
         contenido: dict[str, object] = {"status": estado, "msg": mensaje}
@@ -287,6 +288,8 @@ def descargax():
             try:
                 with aplicacion.app_context():
                     resultado = procesar_descarga(job_id)
+                if es_webview_android and resultado.get("status") == "success":
+                    resultado["msg"] = f"{resultado.get('file_name', 'Archivo')} descargado en Descargas/todo"
             except Exception:
                 aplicacion.logger.exception("No se pudo finalizar la tarea de descarga web")
                 resultado = {"status": "error", "msg": "No se pudo completar la descarga."}
