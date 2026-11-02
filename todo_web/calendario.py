@@ -4,7 +4,7 @@ from typing import Callable, Protocol, cast
 
 import pendulum
 from babel.dates import get_month_names
-from flask import Blueprint, render_template, request
+from flask import Blueprint, jsonify, render_template, request
 from flask_wtf import FlaskForm
 from wtforms import DecimalField, StringField
 from wtforms.validators import InputRequired, NumberRange
@@ -26,6 +26,7 @@ class FormDescuento(FlaskForm):
 
 
 @app1.route("/", methods=["GET", "POST"])
+@app1.route("/api", methods=["GET", "POST"])
 def calendario_app():
     ahora = pendulum.now("America/Guayaquil")
     hoy = ahora.start_of("day")
@@ -34,14 +35,35 @@ def calendario_app():
     meses = [{"nombre": nombres[m], "mes_numero": m, "semanas": calendar.Calendar().monthdayscalendar(ahora.year, m)} for m in range(ahora.month, 13)]
     edad_anos = edad_meses = edad_dias = None
     signo = fn = cumple = msg = ""
+    mensaje_edad = ""
     dias_hasta_cumple = descuento = None
+    api = request.path == "/api"
+    if api and request.method == "GET":
+        return jsonify(
+            anio=ahora.year,
+            hoy=ahora.day,
+            hoy_mes=ahora.month,
+            meses=meses,
+        )
+
+    datos_api: dict[str, object] = {}
+    if api:
+        contenido_json = request.get_json(silent=True)
+        if isinstance(contenido_json, dict):
+            datos_api = cast(dict[str, object], contenido_json)
     panel = request.form.get("panel", request.args.get("panel", "calculadoras"))
     if panel not in ("calculadoras", "descargas", "calendario"):
         panel = "calculadoras"
-    accion = request.form.get("accion")
-    if request.method == "POST" and accion == "edad":
-        fecha = f1.fecha.data
-        if cast(_FormularioValidable, f1).validate_on_submit() and fecha is not None:
+    accion_api = datos_api.get("accion")
+    accion = accion_api if isinstance(accion_api, str) else None
+    if not api:
+        accion = request.form.get("accion")
+    if (request.method == "POST" or api) and accion == "edad":
+        fecha_api = datos_api.get("fecha")
+        fecha_recibida = fecha_api if api else f1.fecha.data
+        fecha = fecha_recibida if isinstance(fecha_recibida, str) else ""
+        fecha_valida = bool(fecha.strip())
+        if fecha_valida if api else cast(_FormularioValidable, f1).validate_on_submit():
             try:
                 nacimiento = pendulum.from_format(fecha.strip(), "DD/MM/YYYY", tz="America/Guayaquil")
                 if nacimiento > hoy:
@@ -71,18 +93,50 @@ def calendario_app():
                 ]
                 signo = next(nombre for limite, nombre in limites if nacimiento.month * 100 + nacimiento.day < limite)
                 fn, cumple = nacimiento.format("DD/MM/YYYY"), cumple_d.format("DD/MM/YYYY")
+                mensaje_cumple = "¡Feliz cumpleaños!" if dias_hasta_cumple == 0 else f"Faltan {dias_hasta_cumple} días para tu cumpleaños."
+                mensaje_edad = (
+                    f"Edad: {edad_anos} años, {edad_meses} meses, {edad_dias} días\n"
+                    f"Signo: {signo}\nNacimiento: {fn}\nPróximo cumpleaños: {cumple}\n"
+                    f"{mensaje_cumple}"
+                )
             except ValueError:
                 msg = "Ingresa una fecha válida, no futura, con formato DD/MM/AAAA."
         else:
             msg = "Ingresa tu fecha de nacimiento."
-    elif request.method == "POST" and accion == "descuento":
-        monto, porcentaje = f2.monto.data, f2.porc.data
-        if cast(_FormularioValidable, f2).validate_on_submit() and monto is not None and porcentaje is not None:
-            descuento = (monto * (1 - porcentaje / Decimal(100))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    elif (request.method == "POST" or api) and accion == "descuento":
+        if api:
+            try:
+                monto = Decimal(str(datos_api.get("monto", "")))
+                porcentaje = Decimal(str(datos_api.get("porcentaje", "")))
+            except Exception:
+                monto = porcentaje = None
+            datos_descuento_validos = (
+                monto is not None and porcentaje is not None
+                and monto.is_finite() and porcentaje.is_finite()
+                and monto >= 0 and Decimal(0) <= porcentaje <= Decimal(100)
+            )
+        else:
+            monto, porcentaje = f2.monto.data, f2.porc.data
+            datos_descuento_validos = (
+                cast(_FormularioValidable, f2).validate_on_submit()
+                and monto is not None and porcentaje is not None
+            )
+        if datos_descuento_validos and monto is not None and porcentaje is not None:
+            try:
+                descuento = (monto * (1 - porcentaje / Decimal(100))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            except Exception:
+                msg = "No se pudo calcular el descuento con esos valores."
         else:
             msg = "Ingresa un monto mayor o igual a cero y un porcentaje entre 0 y 100."
-    elif request.method == "POST":
+    elif (request.method == "POST" or api):
         msg = "Selecciona una operación válida."
+
+    if api:
+        if msg:
+            return jsonify(status="error", msg=msg), 400
+        if accion == "edad":
+            return jsonify(status="success", msg=mensaje_edad)
+        return jsonify(status="success", msg=f"Total: ${descuento:.2f}")
     return render_template(
         "app.html",
         ahora=ahora,
