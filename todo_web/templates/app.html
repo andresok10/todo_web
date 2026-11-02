@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% if panel == 'descarga_resultado' and estado == 'success' and download_url %}<meta http-equiv="refresh" content="1;url={{ download_url }}">{% endif %}
+    {% if panel == 'descarga_progreso' and estado == 'processing' and estado_url %}<meta http-equiv="refresh" content="1;url={{ estado_url }}">{% elif panel == 'descarga_progreso' and estado == 'success' and download_url %}<meta http-equiv="refresh" content="4;url={{ download_url }}">{% endif %}
     <title>Todo · Tus herramientas</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='11') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='todo-compacto.css', v='12') }}">
 </head>
 <body>
     <header class="app-header">
@@ -62,7 +62,6 @@
     </main>
     {% elif panel in ('descargas', 'descarga_resultado') %}
     <main class="descarga-container" id="descargar-form">
-        {% if panel == 'descarga_resultado' and msg %}<p class="mensaje-descarga" role="status">{{ msg }}</p>{% endif %}
         <div class="card-heading">
             <div><h2>Descargar video o audio</h2><p>Pega un enlace y elige el formato.</p></div>
         </div>
@@ -81,7 +80,19 @@
                 <label><input type="radio" name="download_type" value="audio"><span>Audio</span></label>
             </fieldset>
             <button type="submit">↓ &nbsp; Descargar archivo</button>
+            {% if panel == 'descarga_resultado' and msg %}<p class="mensaje-descarga" role="status" aria-live="polite">{{ msg }}</p>{% endif %}
+            {% if panel == 'descarga_resultado' %}<progress class="download-progress" max="100" value="{{ progreso|default(0) }}" aria-label="Progreso de la descarga"></progress>{% else %}<progress class="download-progress" max="100" value="0" aria-label="Progreso de la descarga"></progress>{% endif %}
         </form>
+    </main>
+    {% elif panel == 'descarga_progreso' %}
+    <main class="descarga-container" id="descargar-progreso">
+        <div class="card-heading">
+            <div><h2>Descargar video o audio</h2><p>Flask está procesando tu descarga.</p></div>
+        </div>
+        <button type="button" disabled>{% if estado == 'processing' %}Descargando archivo…{% elif estado == 'success' %}Descarga lista{% else %}Descarga detenida{% endif %}</button>
+        <p class="mensaje-descarga" role="status" aria-live="polite">{{ msg }}</p>
+        <progress class="download-progress" max="100" {% if progreso is not none %}value="{{ progreso }}"{% endif %} aria-label="Progreso de la descarga"></progress>
+        {% if estado in ('success', 'error') %}<a class="volver-link" href="{{ url_for('calendario.calendario_app', panel='descargas') }}">Volver a descargas</a>{% endif %}
     </main>
     {% elif panel == 'server' %}
     <main class="descarga-container">

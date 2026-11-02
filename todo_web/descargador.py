@@ -25,6 +25,8 @@ TEMPORALES_ANDROID = Path(tempfile.gettempdir()) / "todo4-android"
 TEMP_TTL_SECONDS = 3600
 CONTADORES_DESCARGAS = {"audio": 0, "video": 0}
 LOCK_CONTADORES = threading.Lock()
+DESCARGAS_WEB: dict[str, dict[str, object]] = {}
+LOCK_DESCARGAS_WEB = threading.Lock()
 CANDIDATOS_FFMPEG = (
     os.environ.get("FFMPEG_LOCATION"),
     shutil.which("ffmpeg"),
@@ -87,9 +89,10 @@ def descargax():
                 "app.html",
                 panel="descarga_resultado",
                 estado=estado,
-                msg=None if estado == "success" and "Web1App/1.0" in request.headers.get("User-Agent", "") else mensaje,
+                msg=mensaje,
                 download_url=contenido.get("download_url"),
                 file_name=contenido.get("file_name"),
+                progreso=100 if estado == "success" else 0,
             ), codigo
         return jsonify(contenido), codigo
 
@@ -129,7 +132,6 @@ def descargax():
         return respuesta("error", "Usa una URL pública de YouTube, Facebook, TikTok, Instagram o Vimeo.", 400)
     if not FFMPEG:
         return respuesta("error", "Falta FFmpeg. Instálalo o configura FFMPEG_LOCATION con la ruta del ejecutable.", 503)
-    CARPETA_DESCARGA.mkdir(parents=True, exist_ok=True)
     prefijo = "audio" if tipo == "audio" else "video"
 
     def siguiente_numero() -> int:
@@ -147,93 +149,203 @@ def descargax():
             CONTADORES_DESCARGAS[prefijo] = numero
             return numero
 
-    try:
-        numero = siguiente_numero()
-    except OSError:
-        current_app.logger.exception("No se pudo asignar el nombre consecutivo")
-        return respuesta("error", "No se pudo asignar un nombre consecutivo al archivo.", 503)
-    identificador = f"{prefijo}{numero}"
-    temporal = destino == "android" or os.environ.get("RENDER") == "true" or os.environ.get("TEMPORARY_DOWNLOADS") == "1"
-    token = uuid4().hex if temporal else None
-    carpeta = TEMPORALES_ANDROID / token if token else CARPETA_DESCARGA
-    carpeta.mkdir(parents=True, exist_ok=True)
-    if token:
-        for vieja in TEMPORALES_ANDROID.iterdir():
-            if re.fullmatch(r"[0-9a-f]{32}", vieja.name) and vieja.is_dir() and vieja.stat().st_mtime < time.time() - TEMP_TTL_SECONDS and not any(vieja.glob("*.reserve")):
-                shutil.rmtree(vieja, ignore_errors=True)
-    reserva = carpeta / f"{identificador}.reserve"
-    reserva.touch(exist_ok=False)
-    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
-    cookies_buffer: StringIO | None = None
-    try:
-        if cookies_file and Path(cookies_file).is_file():
-            cookies_buffer = StringIO(Path(cookies_file).read_text(encoding="utf-8"))
-        with YoutubeDL(
-            cast(
-                Any,
-                {
-                    "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
-                    "noplaylist": True,
-                    "ffmpeg_location": FFMPEG,
-                    **({"cookiefile": cookies_buffer} if cookies_buffer is not None else {}),
-                    "js_runtimes": YT_DLP_JS_RUNTIMES,
-                    "quiet": True,
-                    "no_warnings": True,
-                    "socket_timeout": 30,
-                    "retries": 2,
-                    "max_filesize": 500 * 1024 * 1024,
-                    "format": "bestaudio/best" if tipo == "audio" else "bestvideo+bestaudio/best",
-                    "postprocessors": ([{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}] if tipo == "audio" else []),
-                    "merge_output_format": "mkv",
-                },
+    def procesar_descarga(job_id: str | None = None) -> dict[str, object]:
+        try:
+            CARPETA_DESCARGA.mkdir(parents=True, exist_ok=True)
+            numero = siguiente_numero()
+        except OSError:
+            current_app.logger.exception("No se pudo asignar el nombre consecutivo")
+            return {"status": "error", "msg": "No se pudo asignar un nombre consecutivo al archivo."}
+
+        identificador = f"{prefijo}{numero}"
+        temporal = destino == "android" or os.environ.get("RENDER") == "true" or os.environ.get("TEMPORARY_DOWNLOADS") == "1"
+        token = uuid4().hex if temporal else None
+        carpeta = TEMPORALES_ANDROID / token if token else CARPETA_DESCARGA
+        reserva = carpeta / f"{identificador}.reserve"
+        cookies_buffer: StringIO | None = None
+        try:
+            carpeta.mkdir(parents=True, exist_ok=True)
+            if token:
+                for vieja in TEMPORALES_ANDROID.iterdir():
+                    if re.fullmatch(r"[0-9a-f]{32}", vieja.name) and vieja.is_dir() and vieja.stat().st_mtime < time.time() - TEMP_TTL_SECONDS and not any(vieja.glob("*.reserve")):
+                        shutil.rmtree(vieja, ignore_errors=True)
+            reserva.touch(exist_ok=False)
+            cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+            if cookies_file and Path(cookies_file).is_file():
+                cookies_buffer = StringIO(Path(cookies_file).read_text(encoding="utf-8"))
+
+            def progreso_yt_dlp(informacion: dict[str, object]) -> None:
+                if job_id is None:
+                    return
+                estado_hook = informacion.get("status")
+                archivo_hook = Path(str(informacion.get("filename", identificador))).name
+                with LOCK_DESCARGAS_WEB:
+                    job = DESCARGAS_WEB.get(job_id)
+                    if job is None:
+                        return
+                    job["updated"] = time.time()
+                    if estado_hook == "downloading":
+                        actual = informacion.get("downloaded_bytes")
+                        total = informacion.get("total_bytes") or informacion.get("total_bytes_estimate")
+                        if isinstance(actual, (int, float)) and isinstance(total, (int, float)) and total > 0:
+                            porcentaje = min(99, max(0, int(actual * 100 / total)))
+                            anterior = job.get("progreso")
+                            job["progreso"] = max(porcentaje, int(anterior)) if isinstance(anterior, (int, float)) else porcentaje
+                            job["msg"] = f"Descargando {archivo_hook}: {job['progreso']}%"
+                        else:
+                            job["progreso"] = None
+                            job["msg"] = f"Descargando {archivo_hook}…"
+                    elif estado_hook == "finished":
+                        progreso_actual = job.get("progreso")
+                        progreso_entero = int(progreso_actual) if isinstance(progreso_actual, (int, float)) else 0
+                        job["progreso"] = max(90, progreso_entero)
+                        job["msg"] = "Preparando el archivo…"
+
+            opciones: dict[str, Any] = {
+                "outtmpl": str(carpeta / f"{identificador}.%(ext)s"),
+                "noplaylist": True,
+                "ffmpeg_location": FFMPEG,
+                **({"cookiefile": cookies_buffer} if cookies_buffer is not None else {}),
+                "js_runtimes": YT_DLP_JS_RUNTIMES,
+                "quiet": True,
+                "no_warnings": True,
+                "socket_timeout": 30,
+                "retries": 2,
+                "max_filesize": 500 * 1024 * 1024,
+                "format": "bestaudio/best" if tipo == "audio" else "bestvideo+bestaudio/best",
+                "postprocessors": ([{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}] if tipo == "audio" else []),
+                "merge_output_format": "mkv",
+                "progress_hooks": [progreso_yt_dlp],
+            }
+            with YoutubeDL(cast(Any, opciones)) as ydl:
+                ydl.extract_info(url, download=True)
+
+            archivos = [f for f in carpeta.glob(f"{identificador}.*") if f.is_file() and f.suffix in (".m4a", ".mp4", ".mkv", ".webm", ".mov", ".flv", ".3gp", ".ogg", ".mp3")]
+            if len(archivos) != 1 or archivos[0].stat().st_size == 0:
+                raise DownloadError("No se generó un archivo multimedia completo.")
+            archivo = archivos[0]
+            nombre_normalizado = carpeta / f"{identificador}{archivo.suffix.lower()}"
+            if archivo != nombre_normalizado:
+                archivo.rename(nombre_normalizado)
+                archivo = nombre_normalizado
+            enlace_descarga = (
+                f"/server/android/{token}/{quote(archivo.name)}"
+                if token
+                else f"/server/{quote(archivo.name)}"
             )
-        ) as ydl:
-            ydl.extract_info(url, download=True)
-            if cookies_buffer is not None:
-                cookies_buffer.seek(0)
-        archivos = [f for f in carpeta.glob(f"{identificador}.*") if f.is_file() and f.suffix in (".m4a", ".mp4", ".mkv", ".webm", ".mov", ".flv", ".3gp", ".ogg", ".mp3")]
-        if len(archivos) != 1 or archivos[0].stat().st_size == 0:
-            raise DownloadError("No se generó un archivo multimedia completo.")
-        archivo = archivos[0]
-        nombre_normalizado = carpeta / f"{identificador}{archivo.suffix.lower()}"
-        if archivo != nombre_normalizado:
-            archivo.rename(nombre_normalizado)
-            archivo = nombre_normalizado
-        mensaje = f"{archivo.name} descargado"
-        return respuesta(
-            "success",
-            mensaje,
-            200,
-            {
-                "download_url": url_for("descargas_ok.serve_download", output_file=archivo.name, token=token),
+            return {
+                "status": "success",
+                "msg": f"{archivo.name} descargado",
+                "download_url": enlace_descarga,
                 "download_to_browser": bool(token and destino == "web"),
                 "extension": archivo.suffix.lstrip("."),
                 "file_name": archivo.name,
-            },
-        )
-    except (DownloadError, OSError) as error:
-        current_app.logger.exception("Falló la descarga multimedia")
-        for parcial in carpeta.glob(f"{identificador}.*"):
-            if parcial.is_file():
-                try:
-                    parcial.unlink(missing_ok=True)
-                except OSError:
-                    current_app.logger.warning("No se pudo eliminar el archivo parcial: %s", parcial)
-        if token:
-            shutil.rmtree(carpeta, ignore_errors=True)
-        detalle = str(error).lower()
-        if isinstance(error, DownloadError) and "sign in to confirm" in detalle:
-            mensaje = "YouTube bloqueó la descarga desde Render. Configura un archivo de cookies de YouTube como secreto y define YOUTUBE_COOKIES_FILE."
+            }
+        except Exception as error:
+            current_app.logger.exception("Falló la descarga multimedia")
+            for parcial in carpeta.glob(f"{identificador}.*"):
+                if parcial.is_file():
+                    try:
+                        parcial.unlink(missing_ok=True)
+                    except OSError:
+                        current_app.logger.warning("No se pudo eliminar el archivo parcial: %s", parcial)
+            if token:
+                shutil.rmtree(carpeta, ignore_errors=True)
+            detalle = str(error).lower()
+            if isinstance(error, DownloadError) and "sign in to confirm" in detalle:
+                mensaje = "YouTube bloqueó la descarga desde Render. Configura un archivo de cookies de YouTube como secreto y define YOUTUBE_COOKIES_FILE."
+            else:
+                mensaje = "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp."
+            return {"status": "error", "msg": mensaje}
+        finally:
+            if cookies_buffer is not None:
+                cookies_buffer.close()
+            try:
+                reserva.unlink(missing_ok=True)
+            except OSError:
+                current_app.logger.warning("No se pudo retirar la reserva: %s", reserva)
+
+    if es_formulario:
+        job_id = uuid4().hex
+        ahora_job = time.time()
+        with LOCK_DESCARGAS_WEB:
+            for id_viejo, job_viejo in list(DESCARGAS_WEB.items()):
+                creado = job_viejo.get("created")
+                if isinstance(creado, (int, float)) and ahora_job - creado > TEMP_TTL_SECONDS:
+                    DESCARGAS_WEB.pop(id_viejo, None)
+            DESCARGAS_WEB[job_id] = {
+                "status": "processing",
+                "msg": "Conectando y preparando la descarga…",
+                "progreso": None,
+                "created": ahora_job,
+                "updated": ahora_job,
+                "download_started": False,
+            }
+        aplicacion = cast(Any, current_app)._get_current_object()
+
+        def ejecutar_descarga_web() -> None:
+            try:
+                with aplicacion.app_context():
+                    resultado = procesar_descarga(job_id)
+            except Exception:
+                aplicacion.logger.exception("No se pudo finalizar la tarea de descarga web")
+                resultado = {"status": "error", "msg": "No se pudo completar la descarga."}
+            with LOCK_DESCARGAS_WEB:
+                job = DESCARGAS_WEB.get(job_id)
+                if job is not None:
+                    job.update(resultado)
+                    job["progreso"] = 100 if resultado.get("status") == "success" else 0
+                    job["updated"] = time.time()
+
+        threading.Thread(target=ejecutar_descarga_web, name=f"descarga-{job_id[:8]}", daemon=True).start()
+        return render_template(
+            "app.html",
+            panel="descarga_progreso",
+            estado="processing",
+            msg="Conectando y preparando la descarga…",
+            progreso=None,
+            estado_url=url_for("descargas_ok.estado_descarga_web", job_id=job_id),
+        ), 202
+
+    resultado = procesar_descarga()
+    return respuesta(
+        str(resultado.get("status", "error")),
+        str(resultado.get("msg", "No se pudo descargar.")),
+        200 if resultado.get("status") == "success" else 502,
+        {k: v for k, v in resultado.items() if k not in ("status", "msg")},
+    )
+
+
+@app2.route("/descarga/estado/<job_id>", methods=["GET"])
+def estado_descarga_web(job_id: str):
+    if not re.fullmatch(r"[0-9a-f]{32}", job_id):
+        return "Descarga no encontrada.", 404
+    with LOCK_DESCARGAS_WEB:
+        registro = DESCARGAS_WEB.get(job_id)
+        if registro is None:
+            return render_template(
+                "app.html",
+                panel="descarga_progreso",
+                estado="error",
+                msg="La descarga ya no está disponible. Inicia otra descarga.",
+                progreso=0,
+            ), 404
+        datos = dict(registro)
+        url_archivo = datos.get("download_url")
+        if datos.get("status") == "success" and not datos.get("download_started"):
+            datos["download_started"] = True
+            registro["download_started"] = True
         else:
-            mensaje = "No se pudo descargar. Comprueba el enlace, su disponibilidad y la versión de yt-dlp."
-        return respuesta("error", mensaje, 502)
-    finally:
-        if cookies_buffer is not None:
-            cookies_buffer.close()
-        try:
-            reserva.unlink(missing_ok=True)
-        except OSError:
-            current_app.logger.warning("No se pudo retirar la reserva: %s", reserva)
+            url_archivo = None
+    return render_template(
+        "app.html",
+        panel="descarga_progreso",
+        estado=datos.get("status", "processing"),
+        msg=datos.get("msg", "Procesando descarga…"),
+        progreso=datos.get("progreso"),
+        estado_url=url_for("descargas_ok.estado_descarga_web", job_id=job_id),
+        download_url=url_archivo,
+    )
 
 
 @app2.route("/server/<path:output_file>")
